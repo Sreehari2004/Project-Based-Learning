@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment - MindTrack</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="assessment.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <img src="https://api.iconify.design/lucide:brain.svg?color=%23805ad5" alt="MindTrack Logo"
+                    class="logo-img">
+                <span>MindTrack</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="assessment.html" class="active">Assessment</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <section class="assessment">
+            <div class="container">
+                <div class="assessment-card">
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 5%;"></div>
+                    </div>
+                    <p class="question-counter">Question 1 of 20</p>
+                    <h2 id="question-text"></h2>
+
+                    <div class="slider-container">
+                        <input type="range" id="question-slider" style="width: 100%;">
+                        <div class="slider-labels">
+                            <span id="min-label"></span>
+                            <span id="max-label"></span>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="secondary-button" id="prev-btn" disabled>Previous</button>
+                        <button class="primary-button" id="next-btn">Next</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results" style="display: none;">
+            <div class="container">
+                <h2>Your Stress Score: <span id="stress-score"></span> (0-2)</h2>
+                
+                
+                <!-- Stress Score Progress Bar -->
+                <div class="stress-bar-container">
+                    <div id="stress-bar"></div>
+                </div>
+        
+                <h3>Personalized Stress Management Plan</h3>
+                <p id="stress-plan"></p>
+            </div>
+        </section>
+        
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Made with ❤️ by MindTrack Team</p>
+            <p class="copyright">© 2024 MindTrack. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const questions = [
+            { text: "How often do you feel anxious or worried in your daily life?", min: 1, max: 20, mid: 10.5, minLabel: "Never", maxLabel: "Extremely often" },
+            { text: "How confident do you feel about yourself and your abilities?", min: 1, max: 30, mid: 15.5, minLabel: "Very low", maxLabel: "Very high" },
+            { text: "Have you ever been diagnosed with or sought professional help for mental health issues?", min: 0, max: 1, mid: 0.5, minLabel: "No", maxLabel: "Yes" },
+            { text: "How often do you feel sad, hopeless, or lose interest in activities?", min: 1, max: 30, mid: 15.5, minLabel: "Never", maxLabel: "Very frequently" },
+            { text: "How often do you experience headaches?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
+            { text: "Have you experienced any issues related to blood pressure recently?", min: 1, max: 3, mid: 2, minLabel: "Low", maxLabel: "High" },
+            { text: "How would you rate the quality of your sleep?", min: 1, max: 5, mid: 3, minLabel: "Very poor", maxLabel: "Excellent" },
+            { text: "How often do you experience breathing difficulties?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
+            { text: "How would you rate the noise levels in your environment?", min: 1, max: 5, mid: 3, minLabel: "Very quiet", maxLabel: "Extremely noisy" },
+            { text: "How do you think the living conditions around you are?", min: 1, max: 5, mid: 3, minLabel: "Very poor", maxLabel: "Excellent" },
+            { text: "How safe do you feel in your environment?", min: 1, max: 5, mid: 3, minLabel: "Not safe at all", maxLabel: "Very safe" },
+            { text: "How well are your basic needs (food, water, shelter) met?", min: 1, max: 5, mid: 3, minLabel: "Not met at all", maxLabel: "Fully met" },
+            { text: "How satisfied are you with your academic performance?", min: 1, max: 5, mid: 3, minLabel: "Very dissatisfied", maxLabel: "Very satisfied" },
+            { text: "How much study load do you think you have?", min: 1, max: 5, mid: 3, minLabel: "Very low", maxLabel: "Overwhelming" },
+            { text: "How would you describe your relationship with your teachers?", min: 1, max: 5, mid: 3, minLabel: "Not good", maxLabel: "Very good" },
+            { text: "How concerned are you about your future career?", min: 1, max: 5, mid: 3, minLabel: "Not concerned", maxLabel: "Extremely concerned" },
+            { text: "How strong is your social support system (family, friends, etc.)?", min: 1, max: 3, mid: 2, minLabel: "Weak", maxLabel: "Strong" },
+            { text: "How much peer pressure do you experience?", min: 1, max: 5, mid: 3, minLabel: "None", maxLabel: "Extremely high" },
+            { text: "How often do you engage in extracurricular activities?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
+            { text: "Have you ever experienced bullying?", min: 1, max: 5, mid: 3, minLabel: "No bullying", maxLabel: "Severe bullying" }
+        ];
+
+        let currentQuestion = 0;
+        let responses = [];
+
+        function loadQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById("question-text").textContent = q.text;
+            document.getElementById("question-slider").min = q.min;
+            document.getElementById("question-slider").max = q.max;
+            document.getElementById("min-label").textContent = q.minLabel;
+            document.getElementById("max-label").textContent = q.maxLabel;
+            document.querySelector(".progress").style.width = `${(currentQuestion + 1) / questions.length * 100}%`;
+            document.querySelector(".question-counter").textContent = `Question ${currentQuestion + 1} of 20`;
+            document.getElementById("prev-btn").disabled = currentQuestion === 0;
+        }
+
+        document.getElementById("next-btn").addEventListener("click", () => {
+            responses[currentQuestion] = parseInt(document.getElementById("question-slider").value);
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                loadQuestion();
+            } else {
+                calculateStressScore();
+            }
+        });
+
+        document.getElementById("prev-btn").addEventListener("click", () => {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                loadQuestion();
+            }
+        });
+
+        function calculateStressScore() {
+            let totalScore = responses.reduce((a, b) => a + b, 0);
+            let stressScore = (totalScore / (questions.length * 30)) * 2;
+            stressScore = Math.min(2, Math.max(0, stressScore.toFixed(2)));
+            document.getElementById("stress-score").textContent = stressScore;
+            document.querySelector(".assessment").style.display = "none";
+            document.querySelector(".results").style.display = "block";
+
+            let stressPlan;
+            if (stressScore < 0.5) {
+                stressPlan = "You have a low stress level. Maintain a balanced lifestyle by:\n" +
+                    "- Staying physically active (walking, yoga, or gym workouts).\n" +
+                    "- Practicing mindfulness and meditation.\n" +
+                    "- Getting enough sleep (7-9 hours per night).\n" +
+                    "- Keeping a positive social circle and engaging in hobbies.";
+            } else if (stressScore < 1) {
+                stressPlan = "Your stress is moderate. Consider the following to prevent escalation:\n" +
+                    "- Practice deep breathing exercises (box breathing, diaphragmatic breathing).\n" +
+                    "- Maintain a structured daily routine.\n" +
+                    "- Reduce screen time and engage in offline activities.\n" +
+                    "- Limit caffeine and processed foods, and stay hydrated.\n" +
+                    "- Journaling your thoughts and practicing gratitude.";
+            } else if (stressScore < 1.5) {
+                stressPlan = "You are experiencing moderate to high stress. Try these techniques:\n" +
+                    "- Engage in relaxation techniques like progressive muscle relaxation.\n" +
+                    "- Reduce workload and practice effective time management.\n" +
+                    "- Seek support from close friends, family, or support groups.\n" +
+                    "- Listen to calming music or try aromatherapy.\n" +
+                    "- Take short breaks during study or work sessions to refresh your mind.";
+            } else {
+                stressPlan = "Your stress level is high. It's important to take immediate action:\n" +
+                    "- Consider seeking professional help (counseling, therapy, or support groups).\n" +
+                    "- Engage in high-intensity physical activities like running, swimming, or martial arts to release stress.\n" +
+                    "- Avoid negative coping mechanisms such as excessive alcohol, caffeine, or overworking.\n" +
+                    "- Try guided meditation apps or stress relief programs.\n" +
+                    "- Prioritize self-care, set boundaries, and focus on self-compassion.";
+            }
+
+            document.getElementById("stress-plan").textContent = stressPlan;
+        }
+
+        loadQuestion();
+
+        function calculateStressScore() {
+    let totalScore = responses.reduce((a, b) => a + b, 0);
+    let stressScore = (totalScore / (questions.length * 30)) * 2;
+    stressScore = Math.min(2, Math.max(0, stressScore.toFixed(2)));
+
+    document.getElementById("stress-score").textContent = stressScore;
+    document.querySelector(".assessment").style.display = "none";
+    document.querySelector(".results").style.display = "block";
+
+    // Update the stress progress bar
+    let percentage = (stressScore / 2) * 100; // Convert score to percentage
+    let bar = document.getElementById("stress-bar");
+
+    bar.style.width = `${percentage}%`;
+
+    if (stressScore < 0.5) {
+        bar.style.backgroundColor = "green";
+    } else if (stressScore < 1.5) {
+        bar.style.backgroundColor = "yellow";
+    } else {
+        bar.style.backgroundColor = "red";
+    }
+
+    let stressPlan;
+    if (stressScore < 0.5) {
+        stressPlan = "You have a low stress level. Maintain a balanced lifestyle by:\n" +
+            "- Staying physically active (walking, yoga, or gym workouts).\n" +
+            "- Practicing mindfulness and meditation.\n" +
+            "- Getting enough sleep (7-9 hours per night).\n" +
+            "- Keeping a positive social circle and engaging in hobbies.";
+    } else if (stressScore < 1) {
+        stressPlan = "Your stress is moderate. Consider the following to prevent escalation:\n" +
+            "- Practice deep breathing exercises (box breathing, diaphragmatic breathing).\n" +
+            "- Maintain a structured daily routine.\n" +
+            "- Reduce screen time and engage in offline activities.\n" +
+            "- Limit caffeine and processed foods, and stay hydrated.\n" +
+            "- Journaling your thoughts and practicing gratitude.";
+    } else if (stressScore < 1.5) {
+        stressPlan = "You are experiencing moderate to high stress. Try these techniques:\n" +
+            "- Engage in relaxation techniques like progressive muscle relaxation.\n" +
+            "- Reduce workload and practice effective time management.\n" +
+            "- Seek support from close friends, family, or support groups.\n" +
+            "- Listen to calming music or try aromatherapy.\n" +
+            "- Take short breaks during study or work sessions to refresh your mind.";
+    } else {
+        stressPlan = "Your stress level is high. It's important to take immediate action:\n" +
+            "- Consider seeking professional help (counseling, therapy, or support groups).\n" +
+            "- Engage in high-intensity physical activities like running, swimming, or martial arts to release stress.\n" +
+            "- Avoid negative coping mechanisms such as excessive alcohol, caffeine, or overworking.\n" +
+            "- Try guided meditation apps or stress relief programs.\n" +
+            "- Prioritize self-care, set boundaries, and focus on self-compassion.";
+    }
+
+    document.getElementById("stress-plan").textContent = stressPlan;
+}
+
+    </script>
+</body>
+
+</html>
