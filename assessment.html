@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assessment - MindTrack</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="assessment.css">
+    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="static/assessment.css">
 </head>
 
 <body>
@@ -79,23 +79,23 @@
     <script>
         const questions = [
             { text: "How often do you feel anxious or worried in your daily life?", min: 1, max: 20, mid: 10.5, minLabel: "Never", maxLabel: "Extremely often" },
-            { text: "How confident do you feel about yourself and your abilities?", min: 1, max: 30, mid: 15.5, minLabel: "Very low", maxLabel: "Very high" },
+            //{ text: "How confident do you feel about yourself and your abilities?", min: 1, max: 30, mid: 15.5, minLabel: "Very low", maxLabel: "Very high" },
             { text: "Have you ever been diagnosed with or sought professional help for mental health issues?", min: 0, max: 1, mid: 0.5, minLabel: "No", maxLabel: "Yes" },
             { text: "How often do you feel sad, hopeless, or lose interest in activities?", min: 1, max: 30, mid: 15.5, minLabel: "Never", maxLabel: "Very frequently" },
             { text: "How often do you experience headaches?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
             { text: "Have you experienced any issues related to blood pressure recently?", min: 1, max: 3, mid: 2, minLabel: "Low", maxLabel: "High" },
             { text: "How would you rate the quality of your sleep?", min: 1, max: 5, mid: 3, minLabel: "Very poor", maxLabel: "Excellent" },
-            { text: "How often do you experience breathing difficulties?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
+            //{ text: "How often do you experience breathing difficulties?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
             { text: "How would you rate the noise levels in your environment?", min: 1, max: 5, mid: 3, minLabel: "Very quiet", maxLabel: "Extremely noisy" },
-            { text: "How do you think the living conditions around you are?", min: 1, max: 5, mid: 3, minLabel: "Very poor", maxLabel: "Excellent" },
+           // { text: "How do you think the living conditions around you are?", min: 1, max: 5, mid: 3, minLabel: "Very poor", maxLabel: "Excellent" },
             { text: "How safe do you feel in your environment?", min: 1, max: 5, mid: 3, minLabel: "Not safe at all", maxLabel: "Very safe" },
             { text: "How well are your basic needs (food, water, shelter) met?", min: 1, max: 5, mid: 3, minLabel: "Not met at all", maxLabel: "Fully met" },
             { text: "How satisfied are you with your academic performance?", min: 1, max: 5, mid: 3, minLabel: "Very dissatisfied", maxLabel: "Very satisfied" },
-            { text: "How much study load do you think you have?", min: 1, max: 5, mid: 3, minLabel: "Very low", maxLabel: "Overwhelming" },
+           // { text: "How much study load do you think you have?", min: 1, max: 5, mid: 3, minLabel: "Very low", maxLabel: "Overwhelming" },
             { text: "How would you describe your relationship with your teachers?", min: 1, max: 5, mid: 3, minLabel: "Not good", maxLabel: "Very good" },
             { text: "How concerned are you about your future career?", min: 1, max: 5, mid: 3, minLabel: "Not concerned", maxLabel: "Extremely concerned" },
             { text: "How strong is your social support system (family, friends, etc.)?", min: 1, max: 3, mid: 2, minLabel: "Weak", maxLabel: "Strong" },
-            { text: "How much peer pressure do you experience?", min: 1, max: 5, mid: 3, minLabel: "None", maxLabel: "Extremely high" },
+           // { text: "How much peer pressure do you experience?", min: 1, max: 5, mid: 3, minLabel: "None", maxLabel: "Extremely high" },
             { text: "How often do you engage in extracurricular activities?", min: 1, max: 5, mid: 3, minLabel: "Never", maxLabel: "Very frequently" },
             { text: "Have you ever experienced bullying?", min: 1, max: 5, mid: 3, minLabel: "No bullying", maxLabel: "Severe bullying" }
         ];
@@ -116,14 +116,15 @@
         }
 
         document.getElementById("next-btn").addEventListener("click", () => {
-            responses[currentQuestion] = parseInt(document.getElementById("question-slider").value);
-            if (currentQuestion < questions.length - 1) {
-                currentQuestion++;
-                loadQuestion();
-            } else {
-                calculateStressScore();
-            }
-        });
+         responses[currentQuestion] = parseInt(document.getElementById("question-slider").value);
+    if (currentQuestion < questions.length - 1) {
+        currentQuestion++;
+        loadQuestion();
+    } else {
+        submitToBackend();  // ✅ NEW
+    }
+});
+
 
         document.getElementById("prev-btn").addEventListener("click", () => {
             if (currentQuestion > 0) {
@@ -230,6 +231,48 @@
 
     document.getElementById("stress-plan").textContent = stressPlan;
 }
+// Add this function to submit data to the backend
+function submitToBackend() {
+    document.getElementById("next-btn").disabled = true;
+    document.getElementById("next-btn").textContent = "Processing...";
+
+    fetch('http://localhost:5000/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responses: responses })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        displayResults(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        calculateStressScore(); // fallback
+    });
+}
+
+function displayResults(data) {
+    let stressScore = data.stress_score;
+    document.getElementById("stress-score").textContent = stressScore;
+    document.querySelector(".assessment").style.display = "none";
+    document.querySelector(".results").style.display = "block";
+
+    let percentage = (stressScore / 2) * 100;
+    let bar = document.getElementById("stress-bar");
+    bar.style.width = `${percentage}%`;
+    bar.style.backgroundColor = data.recommendations.color;
+
+    let stressPlan = data.recommendations.text + "\n\n";
+    data.recommendations.action_plan.forEach(item => {
+        stressPlan += "- " + item + "\n";
+    });
+
+    document.getElementById("stress-plan").textContent = stressPlan;
+}
+
 
     </script>
 </body>
