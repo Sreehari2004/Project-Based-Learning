@@ -5,7 +5,8 @@ import os
 from flask_cors import CORS 
 
 app = Flask(__name__, static_folder='static')
-CORS(app)  # Enable CORS for all routes
+CORS(app)
+
 # Load the trained SVM model
 try:
     model = joblib.load('svm_model.pkl')
@@ -14,12 +15,26 @@ except Exception as e:
     print(f"Error loading model: {e}")
     model = None
 
-# Define feature names (these should match those used during training)
-feature_names = [
-    'anxiety_level',  'mental_health_history', 'depression','headache','blood_pressure',
-    'sleep_quality','saftey','basic_needs','academic_performance','teacher_student_relationship',
-    'future_career_concerns','social_support','peer_pressure','extracurricular_activities','bullying'
-    
+# Load the StandardScaler (fitted on the 15 selected features)
+try:
+    scaler = joblib.load('scaler.pkl')
+    print("Scaler loaded successfully")
+except Exception as e:
+    print(f"Error loading scaler: {e}")
+    scaler = None
+
+try:
+    rfe = joblib.load('rfe.pkl')
+    print("RFE loaded successfully")
+except Exception as e:
+    print(f"Error loading RFE: {e}")
+    rfe = None
+# Use only the selected 15 features (same order as used during training)
+selected_feature_names = [
+    'anxiety_level', 'self_esteem', 'depression', 'headache', 'blood_pressure',
+    'sleep_quality', 'noise_level', 'safety', 'basic_needs', 'academic_performance',
+    'teacher_student_relationship', 'future_career_concerns', 'social_support',
+    'extracurricular_activities', 'bullying'
 ]
 
 @app.route('/')
@@ -35,104 +50,83 @@ def serve_static(path):
 @app.route('/api/predict', methods=['POST'])
 def predict():
     try:
-        # Get data from request
         data = request.json
         responses = data.get('responses', [])
-        
-        if len(responses) != len(feature_names):
-            return jsonify({
-                'error': f'Expected {len(feature_names)} features, got {len(responses)}'
-            }), 400
-        
-        # Convert responses to numpy array and reshape for prediction
+
+        # if len(responses) != len(selected_feature_names):
+        #     return jsonify({
+        #         'error': f'Expected {len(selected_feature_names)} features, got {len(responses)}'
+        #     }), 400
+
         features = np.array(responses).reshape(1, -1)
-        
-        # Make prediction
+
+        # Apply scaling
+        features = scaler.transform(features)
+        features = rfe.transform(features)
+
+        # Predict with the model
         if model is not None:
-            # Get the raw prediction (classification)
             stress_level = float(model.predict(features)[0])
-            
-            # Ensure the value is between 0-2
             normalized_score = max(0, min(2, stress_level))
-            
-            # Get personalized recommendations based on stress level
             recommendations = get_recommendations(normalized_score)
-            
+
             return jsonify({
                 'stress_score': normalized_score,
                 'recommendations': recommendations
             })
+
         else:
-            # Fallback to basic calculation if model isn't loaded
             basic_score = calculate_basic_score(responses)
             recommendations = get_recommendations(basic_score)
             return jsonify({
                 'stress_score': basic_score,
                 'recommendations': recommendations
             })
-            
+
     except Exception as e:
         print(f"Prediction error: {e}")
         return jsonify({'error': str(e)}), 500
 
 def calculate_basic_score(responses):
-    """Fallback calculation if model fails to load"""
-    # Simple formula: average the values and scale to 0-2
     avg = sum(responses) / len(responses)
-    max_possible = 5  # Assuming max possible value is 5
+    max_possible = 5
     return min(2, (avg / max_possible) * 2)
 
 def get_recommendations(stress_score):
-    """Generate personalized recommendations based on stress score"""
     if stress_score < 0.5:
         return {
             "level": "Low",
             "color": "green",
-            "text": "You have a low stress level. Maintain a balanced lifestyle by staying physically active, practicing mindfulness, getting enough sleep, and engaging in hobbies.",
+            "text": "You have a low stress level. Maintain a balanced lifestyle...",
             "action_plan": [
-                "Stay physically active with walking, yoga, or gym workouts",
-                "Practice mindfulness and meditation",
-                "Get 7-9 hours of sleep per night",
-                "Keep a positive social circle and engage in hobbies"
+                "Stay physically active", "Practice mindfulness", "Get enough sleep", "Engage in hobbies"
             ]
         }
     elif stress_score < 1.0:
         return {
             "level": "Moderate", 
             "color": "yellow",
-            "text": "Your stress is moderate. Consider implementing strategies to prevent escalation.",
+            "text": "Your stress is moderate. Consider strategies to prevent escalation.",
             "action_plan": [
-                "Practice deep breathing exercises (box breathing, diaphragmatic breathing)",
-                "Maintain a structured daily routine",
-                "Reduce screen time and engage in offline activities",
-                "Limit caffeine and processed foods, and stay hydrated",
-                "Journal your thoughts and practice gratitude"
+                "Practice deep breathing", "Maintain a routine", "Reduce screen time", "Journal thoughts"
             ]
         }
     elif stress_score < 1.5:
         return {
             "level": "Moderate to High",
             "color": "orange", 
-            "text": "You are experiencing moderate to high stress. Try implementing stress management techniques.",
+            "text": "You are experiencing moderate to high stress...",
             "action_plan": [
-                "Engage in relaxation techniques like progressive muscle relaxation",
-                "Reduce workload and practice effective time management",
-                "Seek support from close friends, family, or support groups",
-                "Listen to calming music or try aromatherapy",
-                "Take short breaks during study or work sessions"
+                "Try progressive muscle relaxation", "Manage time effectively", "Seek support"
             ]
         }
     else:
         return {
             "level": "High",
             "color": "red",
-            "text": "Your stress level is high. It's important to take immediate action.",
+            "text": "Your stress level is high. Immediate action is recommended.",
             "action_plan": [
-                "Consider seeking professional help (counseling, therapy, or support groups)",
-                "Engage in high-intensity physical activities to release stress",
-                "Avoid negative coping mechanisms such as excessive alcohol or caffeine",
-                "Try guided meditation apps or stress relief programs",
-                "Prioritize self-care, set boundaries, and focus on self-compassion"
+                "Seek professional help", "Engage in physical activity", "Avoid negative coping mechanisms"
             ]
         }
 
