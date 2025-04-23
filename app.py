@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 import os
 import json
+
 from datetime import datetime
 from flask_cors import CORS 
 
@@ -120,7 +121,13 @@ def get_recommendations(stress_score):
             "color": "orange", 
             "text": "You are experiencing moderate to high stress...",
             "action_plan": [
-                "Try progressive muscle relaxation", "Manage time effectively", "Seek support"
+                "1.Practice relaxation techniques"
+                "2. Set realistic goals"
+                "3. Seek support from friends or family",
+                "4. Limit caffeine and sugar intake",
+                "5. Consider professional help if needed"
+                
+             
             ]
         }
     else:

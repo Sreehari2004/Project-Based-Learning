@@ -7,6 +7,16 @@
     <title>Assessment - MindTrack</title>
     <link rel="stylesheet" href="static/styles.css">
     <link rel="stylesheet" href="static/assessment.css">
+    <style>
+        /* Add styling for the value display */
+        .slider-value-display {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #805ad5;
+        }
+    </style>
 </head>
 
 <body>
@@ -38,6 +48,8 @@
 
                     <div class="slider-container">
                         <input type="range" id="question-slider" style="width: 100%;">
+                        <!-- Add value display element -->
+                        <div class="slider-value-display" id="slider-value">Value: </div>
                         <div class="slider-labels">
                             <span id="min-label"></span>
                             <span id="max-label"></span>
@@ -106,8 +118,21 @@
         function loadQuestion() {
             const q = questions[currentQuestion];
             document.getElementById("question-text").textContent = q.text;
-            document.getElementById("question-slider").min = q.min;
-            document.getElementById("question-slider").max = q.max;
+            
+            const slider = document.getElementById("question-slider");
+            slider.min = q.min;
+            slider.max = q.max;
+            
+            // Set default value to the middle of the range
+            const defaultValue = responses[currentQuestion] !== undefined ? 
+                responses[currentQuestion] : 
+                Math.floor((parseInt(q.min) + parseInt(q.max)) / 2);
+            
+            slider.value = defaultValue;
+            
+            // Update the value display
+            updateSliderValue(defaultValue);
+            
             document.getElementById("min-label").textContent = q.minLabel;
             document.getElementById("max-label").textContent = q.maxLabel;
             document.querySelector(".progress").style.width = `${(currentQuestion + 1) / questions.length * 100}%`;
@@ -115,16 +140,25 @@
             document.getElementById("prev-btn").disabled = currentQuestion === 0;
         }
 
-        document.getElementById("next-btn").addEventListener("click", () => {
-         responses[currentQuestion] = parseInt(document.getElementById("question-slider").value);
-    if (currentQuestion < questions.length - 1) {
-        currentQuestion++;
-        loadQuestion();
-    } else {
-        submitToBackend();  // ✅ NEW
-    }
-});
+        // Function to update the slider value display
+        function updateSliderValue(value) {
+            document.getElementById("slider-value").textContent = `Value: ${value}`;
+        }
 
+        // Add event listener for slider input changes
+        document.getElementById("question-slider").addEventListener("input", function() {
+            updateSliderValue(this.value);
+        });
+
+        document.getElementById("next-btn").addEventListener("click", () => {
+            responses[currentQuestion] = parseInt(document.getElementById("question-slider").value);
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                loadQuestion();
+            } else {
+                submitToBackend();
+            }
+        });
 
         document.getElementById("prev-btn").addEventListener("click", () => {
             if (currentQuestion > 0) {
@@ -174,107 +208,107 @@
             document.getElementById("stress-plan").textContent = stressPlan;
         }
 
-        loadQuestion();
-
         function calculateStressScore() {
-    let totalScore = responses.reduce((a, b) => a + b, 0);
-    let stressScore = (totalScore / (questions.length * 30)) * 2;
-    stressScore = Math.min(2, Math.max(0, stressScore.toFixed(2)));
+            let totalScore = responses.reduce((a, b) => a + b, 0);
+            let stressScore = (totalScore / (questions.length * 30)) * 2;
+            stressScore = Math.min(2, Math.max(0, stressScore.toFixed(2)));
 
-    document.getElementById("stress-score").textContent = stressScore;
-    document.querySelector(".assessment").style.display = "none";
-    document.querySelector(".results").style.display = "block";
+            document.getElementById("stress-score").textContent = stressScore;
+            document.querySelector(".assessment").style.display = "none";
+            document.querySelector(".results").style.display = "block";
 
-    // Update the stress progress bar
-    let percentage = (stressScore / 2) * 100; // Convert score to percentage
-    let bar = document.getElementById("stress-bar");
+            // Update the stress progress bar
+            let percentage = (stressScore / 2) * 100; // Convert score to percentage
+            let bar = document.getElementById("stress-bar");
 
-    bar.style.width = `${percentage}%`;
+            bar.style.width = `${percentage}%`;
 
-    if (stressScore < 0.5) {
-        bar.style.backgroundColor = "green";
-    } else if (stressScore < 1.5) {
-        bar.style.backgroundColor = "yellow";
-    } else {
-        bar.style.backgroundColor = "red";
-    }
+            if (stressScore < 0.5) {
+                bar.style.backgroundColor = "green";
+            } else if (stressScore < 1.5) {
+                bar.style.backgroundColor = "yellow";
+            } else {
+                bar.style.backgroundColor = "red";
+            }
 
-    let stressPlan;
-    if (stressScore < 0.5) {
-        stressPlan = "You have a low stress level. Maintain a balanced lifestyle by:\n" +
-            "- Staying physically active (walking, yoga, or gym workouts).\n" +
-            "- Practicing mindfulness and meditation.\n" +
-            "- Getting enough sleep (7-9 hours per night).\n" +
-            "- Keeping a positive social circle and engaging in hobbies.";
-    } else if (stressScore < 1) {
-        stressPlan = "Your stress is moderate. Consider the following to prevent escalation:\n" +
-            "- Practice deep breathing exercises (box breathing, diaphragmatic breathing).\n" +
-            "- Maintain a structured daily routine.\n" +
-            "- Reduce screen time and engage in offline activities.\n" +
-            "- Limit caffeine and processed foods, and stay hydrated.\n" +
-            "- Journaling your thoughts and practicing gratitude.";
-    } else if (stressScore < 1.5) {
-        stressPlan = "You are experiencing moderate to high stress. Try these techniques:\n" +
-            "- Engage in relaxation techniques like progressive muscle relaxation.\n" +
-            "- Reduce workload and practice effective time management.\n" +
-            "- Seek support from close friends, family, or support groups.\n" +
-            "- Listen to calming music or try aromatherapy.\n" +
-            "- Take short breaks during study or work sessions to refresh your mind.";
-    } else {
-        stressPlan = "Your stress level is high. It's important to take immediate action:\n" +
-            "- Consider seeking professional help (counseling, therapy, or support groups).\n" +
-            "- Engage in high-intensity physical activities like running, swimming, or martial arts to release stress.\n" +
-            "- Avoid negative coping mechanisms such as excessive alcohol, caffeine, or overworking.\n" +
-            "- Try guided meditation apps or stress relief programs.\n" +
-            "- Prioritize self-care, set boundaries, and focus on self-compassion.";
-    }
+            let stressPlan;
+            if (stressScore < 0.5) {
+                stressPlan = "You have a low stress level. Maintain a balanced lifestyle by:\n" +
+                    "- Staying physically active (walking, yoga, or gym workouts).\n" +
+                    "- Practicing mindfulness and meditation.\n" +
+                    "- Getting enough sleep (7-9 hours per night).\n" +
+                    "- Keeping a positive social circle and engaging in hobbies.";
+            } else if (stressScore < 1) {
+                stressPlan = "Your stress is moderate. Consider the following to prevent escalation:\n" +
+                    "- Practice deep breathing exercises (box breathing, diaphragmatic breathing).\n" +
+                    "- Maintain a structured daily routine.\n" +
+                    "- Reduce screen time and engage in offline activities.\n" +
+                    "- Limit caffeine and processed foods, and stay hydrated.\n" +
+                    "- Journaling your thoughts and practicing gratitude.";
+            } else if (stressScore < 1.5) {
+                stressPlan = "You are experiencing moderate to high stress. Try these techniques:\n" +
+                    "- Engage in relaxation techniques like progressive muscle relaxation.\n" +
+                    "- Reduce workload and practice effective time management.\n" +
+                    "- Seek support from close friends, family, or support groups.\n" +
+                    "- Listen to calming music or try aromatherapy.\n" +
+                    "- Take short breaks during study or work sessions to refresh your mind.";
+            } else {
+                stressPlan = "Your stress level is high. It's important to take immediate action:\n" +
+                    "- Consider seeking professional help (counseling, therapy, or support groups).\n" +
+                    "- Engage in high-intensity physical activities like running, swimming, or martial arts to release stress.\n" +
+                    "- Avoid negative coping mechanisms such as excessive alcohol, caffeine, or overworking.\n" +
+                    "- Try guided meditation apps or stress relief programs.\n" +
+                    "- Prioritize self-care, set boundaries, and focus on self-compassion.";
+            }
 
-    document.getElementById("stress-plan").textContent = stressPlan;
-}
-// Add this function to submit data to the backend
-function submitToBackend() {
-    document.getElementById("next-btn").disabled = true;
-    document.getElementById("next-btn").textContent = "Processing...";
+            document.getElementById("stress-plan").textContent = stressPlan;
+        }
+        
+        // Add this function to submit data to the backend
+        function submitToBackend() {
+            document.getElementById("next-btn").disabled = true;
+            document.getElementById("next-btn").textContent = "Processing...";
 
-    fetch('http://localhost:5000/api/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responses: responses })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        displayResults(data);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        calculateStressScore(); // fallback
-    });
-}
+            fetch('http://localhost:5000/api/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ responses: responses })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                displayResults(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                calculateStressScore(); // fallback
+            });
+        }
 
-function displayResults(data) {
-    console.log(data);
-    let stressScore = data.stress_score;
-    document.getElementById("stress-score").textContent = stressScore;
-    document.querySelector(".assessment").style.display = "none";
-    document.querySelector(".results").style.display = "block";
+        function displayResults(data) {
+            console.log(data);
+            let stressScore = data.stress_score;
+            document.getElementById("stress-score").textContent = stressScore;
+            document.querySelector(".assessment").style.display = "none";
+            document.querySelector(".results").style.display = "block";
 
-    let percentage = (stressScore / 2) * 100;
-    let bar = document.getElementById("stress-bar");
-    bar.style.width = `${percentage}%`;
-    bar.style.backgroundColor = data.recommendations.color;
+            let percentage = (stressScore / 2) * 100;
+            let bar = document.getElementById("stress-bar");
+            bar.style.width = `${percentage}%`;
+            bar.style.backgroundColor = data.recommendations.color;
 
-    let stressPlan = data.recommendations.text + "\n\n";
-    data.recommendations.action_plan.forEach(item => {
-        stressPlan += "- " + item + "\n";
-    });
+            let stressPlan = data.recommendations.text + "\n\n";
+            data.recommendations.action_plan.forEach(item => {
+                stressPlan += "- " + item + "\n";
+            });
 
-    document.getElementById("stress-plan").textContent = stressPlan;
-}
+            document.getElementById("stress-plan").textContent = stressPlan;
+        }
 
-
+        // Initialize the first question when the page loads
+        loadQuestion();
     </script>
 </body>
 
