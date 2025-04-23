@@ -2,7 +2,10 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 import numpy as np
 import joblib
 import os
+import json
+from datetime import datetime
 from flask_cors import CORS 
+
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -129,6 +132,40 @@ def get_recommendations(stress_score):
                 "Seek professional help", "Engage in physical activity", "Avoid negative coping mechanisms"
             ]
         }
+
+SUBMISSIONS_DIR = 'contact_submissions'
+
+# Ensure the submissions directory exists
+if not os.path.exists(SUBMISSIONS_DIR):
+    os.makedirs(SUBMISSIONS_DIR)
+
+@app.route('/api/submit-contact', methods=['POST'])
+def submit_contact():
+    try:
+        # Get form data from request
+        data = request.json
+        
+        # Validate required fields
+        if not all(key in data for key in ['name', 'email', 'message']):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Add timestamp if not provided
+        if 'timestamp' not in data:
+            data['timestamp'] = datetime.now().isoformat()
+        
+        # Create a unique filename using timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{SUBMISSIONS_DIR}/contact_{timestamp}_{data['name'].replace(' ', '_')}.json"
+        
+        # Write data to file
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Contact form submitted successfully'}), 200
+    
+    except Exception as e:
+        print(f"Error processing contact form: {str(e)}")
+        return jsonify({'error': 'Server error processing your request'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
