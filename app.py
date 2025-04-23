@@ -3,10 +3,8 @@ import numpy as np
 import joblib
 import os
 import json
-
 from datetime import datetime
 from flask_cors import CORS 
-
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
@@ -27,13 +25,14 @@ except Exception as e:
     print(f"Error loading scaler: {e}")
     scaler = None
 
+# Load RFE feature selector
 try:
     rfe = joblib.load('rfe.pkl')
     print("RFE loaded successfully")
 except Exception as e:
     print(f"Error loading RFE: {e}")
     rfe = None
-# Use only the selected 15 features (same order as used during training)
+
 selected_feature_names = [
     'anxiety_level', 'self_esteem', 'depression', 'headache', 'blood_pressure',
     'sleep_quality', 'noise_level', 'safety', 'basic_needs', 'academic_performance',
@@ -57,28 +56,18 @@ def predict():
         data = request.json
         responses = data.get('responses', [])
 
-        # if len(responses) != len(selected_feature_names):
-        #     return jsonify({
-        #         'error': f'Expected {len(selected_feature_names)} features, got {len(responses)}'
-        #     }), 400
-
         features = np.array(responses).reshape(1, -1)
-
-        # Apply scaling
         features = scaler.transform(features)
         features = rfe.transform(features)
 
-        # Predict with the model
         if model is not None:
             stress_level = float(model.predict(features)[0])
             normalized_score = max(0, min(2, stress_level))
             recommendations = get_recommendations(normalized_score)
-
             return jsonify({
                 'stress_score': normalized_score,
                 'recommendations': recommendations
             })
-
         else:
             basic_score = calculate_basic_score(responses)
             recommendations = get_recommendations(basic_score)
@@ -101,42 +90,68 @@ def get_recommendations(stress_score):
         return {
             "level": "Low",
             "color": "green",
-            "text": "You have a low stress level. Maintain a balanced lifestyle...",
+            "text": "You have a low stress level. Maintain a balanced lifestyle to continue feeling well.",
             "action_plan": [
-                "Stay physically active", "Practice mindfulness", "Get enough sleep", "Engage in hobbies"
+                "• Stay physically active",
+                "• Practice mindfulness or meditation",
+                "• Get 7–9 hours of quality sleep",
+                "• Engage in hobbies you enjoy",
+                "• Maintain a healthy diet"
+                "• Stay connected with friends and family",
+                "• Set aside time for relaxation",
+                "• Limit exposure to negative news or social media",
             ]
         }
     elif stress_score < 1.0:
         return {
-            "level": "Moderate", 
+            "level": "Moderate",
             "color": "yellow",
             "text": "Your stress is moderate. Consider strategies to prevent escalation.",
             "action_plan": [
-                "Practice deep breathing", "Maintain a routine", "Reduce screen time", "Journal thoughts"
+                "• Practice deep breathing exercises",
+                "• Maintain a consistent daily routine",
+                "• Reduce screen time, especially before bed",
+                "• Journal your thoughts to process emotions",
+                "• Take short breaks during study or work sessions"
+                "• Stay connected with friends and family",
+                "• Limit alcohol and caffeine intake",
+                "• Engage in light physical activities like walking or stretching",
             ]
         }
     elif stress_score < 1.5:
         return {
             "level": "Moderate to High",
-            "color": "orange", 
-            "text": "You are experiencing moderate to high stress...",
+            "color": "orange",
+            "text": "You are experiencing moderate to high stress. Consider taking proactive steps to manage it.",
             "action_plan": [
-                "1.Practice relaxation techniques"
-                "2. Set realistic goals"
-                "3. Seek support from friends or family",
-                "4. Limit caffeine and sugar intake",
-                "5. Consider professional help if needed"
-                
-             
+                "• Practice relaxation techniques (e.g., yoga, breathing)",
+                "• Set realistic and manageable goals",
+                "• Seek support from friends, mentors, or family",
+                "• Limit intake of caffeine and sugary foods",
+                "• Speak to a counselor or therapist if needed"
+                "• Consider time management strategies"
+                "• Engage in physical activities you enjoy"
+                "• Avoid procrastination and break tasks into smaller steps"
+                "• Practice gratitude and focus on positive aspects of life"
+                "• Limit exposure to negative news or social media"
+                "• Explore new hobbies or interests to distract from stressors"
+                "• Create a balanced schedule that includes leisure time"
             ]
         }
     else:
         return {
             "level": "High",
             "color": "red",
-            "text": "Your stress level is high. Immediate action is recommended.",
+            "text": "Your stress level is high. Immediate action is recommended to prevent burnout or mental health decline.",
             "action_plan": [
-                "Seek professional help", "Engage in physical activity", "Avoid negative coping mechanisms"
+                "• Seek professional mental health support",
+                "• Engage in regular physical activity",
+                "• Avoid negative coping mechanisms (e.g., substance use)",
+                "• Create a stress-reduction plan with a trusted advisor",
+                "• Prioritize sleep and nutrition"
+                "• Limit exposure to stressors (e.g., social media, negative environments)",
+                "• Practice mindfulness or meditation daily",
+                "• In case of extreme emergency call 91-9820466726",
             ]
         }
 
@@ -149,27 +164,21 @@ if not os.path.exists(SUBMISSIONS_DIR):
 @app.route('/api/submit-contact', methods=['POST'])
 def submit_contact():
     try:
-        # Get form data from request
         data = request.json
-        
-        # Validate required fields
         if not all(key in data for key in ['name', 'email', 'message']):
             return jsonify({'error': 'Missing required fields'}), 400
-        
-        # Add timestamp if not provided
+
         if 'timestamp' not in data:
             data['timestamp'] = datetime.now().isoformat()
-        
-        # Create a unique filename using timestamp
+
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"{SUBMISSIONS_DIR}/contact_{timestamp}_{data['name'].replace(' ', '_')}.json"
-        
-        # Write data to file
+        filename = f"{SUBMISSIONS_DIR}/contact_{timestamp}{data['name'].replace(' ', '')}.json"
+
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         return jsonify({'success': True, 'message': 'Contact form submitted successfully'}), 200
-    
+
     except Exception as e:
         print(f"Error processing contact form: {str(e)}")
         return jsonify({'error': 'Server error processing your request'}), 500
