@@ -269,7 +269,7 @@
             document.getElementById("next-btn").disabled = true;
             document.getElementById("next-btn").textContent = "Processing...";
 
-            fetch('http://localhost:5000/api/predict', {
+            fetch('http://43.204.116.21:5000/api/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ responses: responses })
